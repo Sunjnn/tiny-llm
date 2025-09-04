@@ -78,7 +78,20 @@ def scaled_dot_product_attention_grouped(
     scale: float | None = None,
     mask: mx.array | str | None = None,
 ) -> mx.array:
-    pass
+    ret_shape = query.shape
+    H_q, L, D = query.shape[-3:]
+    H, S, _ = key.shape[-3:]
+    n_repeats = H_q // H
+
+    query = query.reshape(-1, H, n_repeats, L, D)
+    key = key.reshape(-1, H, 1, S, D)
+    value = value.reshape(-1, H, 1, S, D)
+    if mask is not None:
+        mask = mask.reshape(-1, H, n_repeats, L, S)
+
+    if isinstance(mask, mx.array):
+        ret = scaled_dot_product_attention_simple(query, key, value, scale=scale, mask=mask)
+        return ret.reshape(ret_shape)
 
 
 def flash_attention(
