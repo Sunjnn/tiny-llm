@@ -24,14 +24,40 @@ class Qwen2MultiHeadAttention:
         max_seq_len: int = 32768,
         theta: int = 1000000,
     ):
-        pass
+        self.E = hidden_size
+        self.H = num_heads
+        self.H_kv = num_kv_heads
+        self.wq = wq
+        self.wk = wk
+        self.wv = wv
+        self.wo = wo
+        self.bq = bq
+        self.bk = bk
+        self.bv = bv
+        self.max_seq_len = max_seq_len
+        self.theta = theta
 
     def __call__(
         self,
         x: mx.array,
         mask: mx.array | str | None = None,
     ) -> mx.array:
-        pass
+        B = x.shape[0]
+        L = x.shape[1]
+
+        q = linear(x, self.wq, self.bq).reshape(B, L, self.H, -1)
+        k = linear(x, self.wk, self.bk).reshape(B, L, self.H_kv, -1)
+        v = linear(x, self.wv, self.bv).reshape(B, L, self.H_kv, -1).swapaxes(1, 2)
+
+        rope = RoPE(self.E // self.H, L)
+        q = rope(q, slice(0, L)).swapaxes(1, 2)
+        k = rope(k, slice(0, L)).swapaxes(1, 2)
+
+        scale = mx.rsqrt(self.E // self.H)
+        out = scaled_dot_product_attention_grouped(q, k, v, mask=mask, scale=scale).swapaxes(1, 2).reshape(B, L, -1)
+
+        out = linear(out, self.wo)
+        return out
 
 
 class Qwen2MLP:
