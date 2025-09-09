@@ -20,4 +20,5 @@ def linear(
 
 
 def silu(x: mx.array) -> mx.array:
-    pass
+    y = x / (1 + mx.exp(-x))
+    return y
