@@ -49,7 +49,7 @@ class Qwen2MultiHeadAttention:
         k = linear(x, self.wk, self.bk).reshape(B, L, self.H_kv, -1)
         v = linear(x, self.wv, self.bv).reshape(B, L, self.H_kv, -1).swapaxes(1, 2)
 
-        rope = RoPE(self.E // self.H, L)
+        rope = RoPE(self.E // self.H, L, self.theta)
         q = rope(q, slice(0, L)).swapaxes(1, 2)
         k = rope(k, slice(0, L)).swapaxes(1, 2)
 
@@ -108,14 +108,23 @@ class Qwen2TransformerBlock:
         max_seq_len: int = 32768,
         theta: int = 1000000,
     ):
-        pass
+        self.input_layernorm = RMSNorm(hidden_size, w_input_layernorm, rms_norm_eps)
+        self.mha = Qwen2MultiHeadAttention(hidden_size, num_attention_heads, num_kv_heads, wq, wk, wv, wo, bq, bk, bv, max_seq_len, theta)
+        self.post_attention_layernorm = RMSNorm(hidden_size, w_post_attention_layernorm, rms_norm_eps)
+        self.mlp = Qwen2MLP(hidden_size, intermediate_size, w_gate, w_up, w_down)
 
     def __call__(
         self,
         x: mx.array,
         mask: mx.array | str | None = None,
     ) -> mx.array:
-        pass
+        input_layernorm = self.input_layernorm(x)
+        mha = self.mha(input_layernorm, mask)
+        y = x + mha
+        post_attention_layernorm = self.post_attention_layernorm(y)
+        mlp = self.mlp(post_attention_layernorm)
+        o = y + mlp
+        return o
 
 
 class Qwen2ModelWeek1:
