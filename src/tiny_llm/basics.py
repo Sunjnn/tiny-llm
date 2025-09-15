@@ -12,7 +12,6 @@ def linear(
     w: mx.array,
     bias: mx.array | None = None,
 ) -> mx.array:
-    print(w.shape)
     result = mx.matmul(x, w.T)
     if bias is not None:
         result = mx.add(result, bias)
