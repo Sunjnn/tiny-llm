@@ -14,7 +14,7 @@ def simple_generate(
     def _step(model, y):
         output_logits = model(y)
         logits = output_logits[:, -1, :]
-        return mx.argmax(logits, axis=-1)[0]
+        return sampler(logits)[0]
 
     prompt_tokens = tokenizer.encode(prompt)
     response_tokens = []
